@@ -17,17 +17,9 @@ namespace StepanMascot
 
         public static List<Vector4> getSprites(ImageResult imageResult, int spriteSize)
         {
-            var sucess = existsMascot(mascotGraphicManager.MascotName);
-
-            if (sucess.Item1)
-            {
-                return sucess.Item2;
-            }
-
 
             var sprites = generateSprites(imageResult, spriteSize);
             spritesManagement(ref sprites, imageResult);
-            saveSprites(sprites);
 
             return sprites;
         }
@@ -108,46 +100,5 @@ namespace StepanMascot
             return false;
         }
 
-        private static void saveSprites(List<Vector4> sprites)
-        {
-            string path = Path.Combine(BasePath, mascotGraphicManager.MascotName + ".mascot");
-
-            System.Numerics.Vector4[] spriteArray = new System.Numerics.Vector4[sprites.Count];
-
-            for (int i = 0; i < sprites.Count; i++)
-            {
-                spriteArray[i] = sprites[i].ConvertOpenTKVector4ToSystemNumericsVector4();
-            }
-
-            mascot currentMascot = mascot.CreateMascot(spriteArray, mascotGraphicManager.MascotName);
-
-            var json = JsonConvert.SerializeObject(currentMascot, JsonSerializerSettings);
-            File.WriteAllText(path, json);
-        }
-
-        private static (bool, List<Vector4> sprites) existsMascot(string mascotName)
-        {
-            string path = Path.Combine(BasePath, mascotName + ".mascot");
-            if (File.Exists(path))
-            {
-                var json = File.ReadAllText(path);
-                var mascot = JsonConvert.DeserializeObject<mascot>(json, JsonSerializerSettings);
-
-                List<Vector4> sprites = new List<Vector4>();
-
-
-                if (mascot != null && mascot.sprites.ContainsKey(""))
-                {
-                    for (int i = 0; i < mascot.sprites.Count; i++)
-                    {
-                        sprites.Add(mascot.sprites[mascotName][i].ConvertSystemNumericsVector4ToOpenTKVector4());
-                    }
-
-
-                    return (true, sprites);
-                }
-            }
-            return (false, new List<Vector4>());
-        }
     }
 }

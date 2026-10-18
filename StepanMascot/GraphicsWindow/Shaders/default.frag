@@ -2,7 +2,6 @@
 
 uniform sampler2D u_texture;
 
-
 in vec2 texCoord;
 
 out vec4 OutPutColor;

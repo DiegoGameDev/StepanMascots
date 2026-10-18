@@ -3,20 +3,18 @@ using OpenTK.Windowing.Desktop;
 using files =  System.IO.File;
 using StbImageSharp;
 using OpenTK.Windowing.Common;
+using StepanMascot.Batch;
+using StepanMascot.MascotManager;
+using StepanMascot.StepanInterComunications;
 using OpenTK.Mathematics;
 
 namespace StepanMascot
 {
     public class mascotGraphicManager : GameWindow
     {
-        int vao = 0;
-        int vbo = 0;
-        int ebo = 0;
+        public static MascotsController mascotsController = new();
 
-        int Handle = 0;
-        int Texture1 = 0;
-
-        List<Vector4> sprites = new();
+        public static bool running { get; private set; }
 
         float[] verts = new float[]
         {
@@ -32,56 +30,30 @@ namespace StepanMascot
             2, 3, 0  // Second triangle
         };
 
-        int mascotSpriteSize = 32;
-
-        ImageResult image;
+        public static Dictionary<string, int> textureByPath = new();
+        public static Dictionary<string, int> shaderByName = new();
 
         public static string MascotName { get; private set; } = "Stepan Mascot";
 
         public mascotGraphicManager(string mascotName, int w, int h, int spriteSize = 32) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
-            Size = new OpenTK.Mathematics.Vector2i(w, h),
             Title = mascotName,
             TransparentFramebuffer = true,
         })
         {
+
+            Size = new OpenTK.Mathematics.Vector2i(CurrentMonitor.HorizontalResolution, CurrentMonitor.VerticalResolution);
             AlwaysOnTop = true;
             WindowBorder = WindowBorder.Hidden;
             MousePassthrough = true;
-            mascotSpriteSize = spriteSize;
             MascotName = mascotName;
+
+            running = true;
         }
 
         protected override void OnLoad()
         {
             GL.ClearColor(0f, 0f, 0f, 0f);
-
-            vao = GL.GenVertexArray();
-            GL.BindVertexArray(vao);
-
-            vbo = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
-            GL.BufferData(BufferTarget.ArrayBuffer, verts.Length * sizeof(float), verts, BufferUsageHint.StaticDraw);
-            
-            GL.EnableVertexAttribArray(0);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
-
-            GL.EnableVertexAttribArray(1);
-            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
-
-            ebo = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
-
-            Handle = createShader(@"C:\Users\DiegoMogger\Desktop\Programas\StepanSoftware\StepanMascot\StepanMascot\StepanMascot\GraphicsWindow\Shaders\default.vert",
-                @"C:\Users\DiegoMogger\Desktop\Programas\StepanSoftware\StepanMascot\StepanMascot\StepanMascot\GraphicsWindow\Shaders\default.frag");
-
-#if DEBUG
-            Texture1 = createTexture(@"C:\Users\DiegoMogger\Desktop\Programas\StepanSoftware\StepanMascot\StepanMascot\StepanMascot\GraphicsWindow\MascotTexture\Stepan-Sheet.png");
-#endif
-
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, Texture1);
 
             start();
         }
@@ -94,12 +66,7 @@ namespace StepanMascot
 
             Location = (x, y);
 
-            generateSprites();
-        }
-
-        void generateSprites()
-        {
-            sprites = SpriteSheetManager.getSprites(image, mascotSpriteSize);
+            RenderBatch.Initialize();
         }
 
         protected override void OnFramebufferResize(FramebufferResizeEventArgs e)
@@ -113,19 +80,13 @@ namespace StepanMascot
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
-            GL.UseProgram(Handle);
-            GL.BindVertexArray(vao);
-
-            Matrix4 model = Matrix4.Identity;
-
-            GL.UniformMatrix4(GL.GetUniformLocation(Handle, "model"), false, ref model);
-            GL.Uniform1(GL.GetUniformLocation(Handle, "u_texture"), 0);
-
-            GL.Uniform4(GL.GetUniformLocation(Handle, "instanceUV"), sprites[currentIndex]);
-
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0);
+
+
+            Matrix4 VP = Matrix4.CreateOrthographic(Size.X, Size.Y, 0.1f, 10f)* Matrix4.LookAt(Vector3.UnitZ * 2, Vector3.UnitZ * -1, Vector3.UnitY);
+
+            RenderBatch.Render(VP);
 
             SwapBuffers();
         }
@@ -136,22 +97,22 @@ namespace StepanMascot
         {
             base.OnUpdateFrame(args);
             float time = (float)args.Time;
-            timeAccumulator += time;
 
-            float mileSecondsPerFrame = 1000f / 12f; // 12 FPS
+            mascotsController.UpdateMascot(time);
 
-            if (timeAccumulator >= mileSecondsPerFrame / 1000f)
+            while (ActionsQueue.shareActions.TryDequeue(out var action))
             {
-                timeAccumulator -= mileSecondsPerFrame / 1000f;
-                currentIndex = (currentIndex + 1) % sprites.Count;
-                if (currentIndex >= sprites.Count)
-                {
-                    currentIndex = 0;
-                }
+                action();
             }
         }
 
-        int createTexture(string texturePath)
+        protected override void OnUnload()
+        {
+            base.OnUnload();
+            running = false;
+        }
+
+        public static int createTexture(string texturePath, out ImageResult image)
         {
             StbImage.stbi_set_flip_vertically_on_load(1);
 
@@ -168,10 +129,12 @@ namespace StepanMascot
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
 
+            GL.BindTexture(TextureTarget.Texture2D, 0);
+
             return textureHandle;
         }
 
-        int createShader(string vertexPath, string fragmentPath)
+        public static int createShader(string vertexPath, string fragmentPath, out int handle)
         {
             string vertexShaderSource = files.ReadAllText(vertexPath);
             string fragmentShaderSource = files.ReadAllText(fragmentPath);
@@ -190,7 +153,7 @@ namespace StepanMascot
             GL.GetShaderInfoLog(fragmentShader, out string fragmentInfoLog);
             Console.WriteLine($"Fragment Shader Info Log: {fragmentInfoLog}");
 
-            int handle = GL.CreateProgram();
+            handle = GL.CreateProgram();
             GL.AttachShader(handle, vertexShader);
             GL.AttachShader(handle, fragmentShader);
             GL.LinkProgram(handle);
@@ -200,6 +163,8 @@ namespace StepanMascot
 
             GL.DeleteShader(vertexShader);
             GL.DeleteShader(fragmentShader);
+
+            Console.WriteLine(handle);
 
             return handle;
         }
