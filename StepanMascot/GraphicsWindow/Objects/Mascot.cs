@@ -7,6 +7,7 @@ using Color = OpenTK.Mathematics.Color4;
 using StepanMascot.Batch;
 using StepanMascot.GraphicsWindow;
 using StepanMascot.GraphicsWindow.Util;
+using StepanMascot.GraphicsWindow.Objects;
 
 namespace StepanMascot
 {
@@ -22,13 +23,15 @@ namespace StepanMascot
 
         #region Properties
         public string mascotName = "";
-        public List<Vector4> sprites = new List<Vector4>();
         public Color color = Color.White;
 
         public Vector3 position { get { return _position; } set { if (value != _position) { _position = value; isDirty = true; } } }
         Vector3 _position;
         public Vector3 scale { get { return _scale; } set { if (value != _scale) { _scale = value; isDirty = true; } } }
         Vector3 _scale = new Vector3(10);
+
+        public List<Vector4> sprites = new List<Vector4>();
+        public Animator animator;
 
 
         //Render Properties
@@ -40,6 +43,9 @@ namespace StepanMascot
 
 
         #region Load Objects
+        [JsonIgnore]
+        public bool isRendering = false;
+
         [JsonIgnore]
         public ImageResult mascotImage;
         [JsonIgnore] 
@@ -99,31 +105,7 @@ namespace StepanMascot
 
         public void mascotUpdate(float deltaTime)
         {
-            if (mascotMaterial == null || sprites.Count == 0)
-                return;
-
-            timeAccumulator += deltaTime;
-
-            float mileSecondsPerFrame = 1000f / 12f; // 12 FPS
-
-            if (timeAccumulator >= mileSecondsPerFrame / 1000f)
-            {
-                timeAccumulator -= mileSecondsPerFrame / 1000f;
-                currentIndex++;
-                if (currentIndex >= sprites.Count)
-                {
-                    currentIndex = 0;
-                }
-            }
-
-            currentSprite = sprites[currentIndex];
-
-            isDirty = true;
-
-            if (objectBatch != null && isDirty)
-            {
-                objectBatch.DirtyMascotBatch(this);
-            }
+            animator.Update(deltaTime, this);
         }
 
         public void BatchUpdate()

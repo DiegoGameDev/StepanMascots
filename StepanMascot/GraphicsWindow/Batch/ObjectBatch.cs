@@ -89,6 +89,7 @@ namespace StepanMascot.Batch
                     return;
                 }
             }
+            mascot.isRendering = false;
             message = "mascot could not be moved to any batch.";
         }
 
@@ -114,6 +115,7 @@ namespace StepanMascot.Batch
                     instanceInfo.isDirty = true;
                     mascots[instanceInfo].Add(mascot);
                     mascot.objectBatch = this;
+                    mascot.isRendering = true;
                     return true;
                 }
                 else
@@ -125,6 +127,7 @@ namespace StepanMascot.Batch
                     instanceInfo.isDirty = true;
                     mascots[instanceInfo].Add(mascot);
                     mascot.objectBatch = this;
+                    mascot.isRendering = true;
                     return true;
                 }
             }
@@ -146,6 +149,7 @@ namespace StepanMascot.Batch
                     mascots.Add(info, new List<Mascot>());
                     mascots[info].Add(mascot);
                     mascot.objectBatch = this;
+                    mascot.isRendering = true;
 
                     batches.Add(key, info);
                     return true;
@@ -170,7 +174,7 @@ namespace StepanMascot.Batch
                     instanceInfo.instanceDatas[instanceInfo.instanceCount - 1] = new InstanceData(); // Clear the last element
                     instanceInfo.instanceCount--;
                     instanceInfo.isDirty = true;
-                    mascots.Remove(instanceInfo);
+                    mascot.isRendering = false;
                 }
             }
         }

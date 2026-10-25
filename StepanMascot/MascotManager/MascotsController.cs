@@ -1,6 +1,4 @@
-﻿
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using StbImageSharp;
 using StepanMascot.Batch;
 using StepanMascot.GraphicsWindow.Assets;
@@ -77,6 +75,8 @@ namespace StepanMascot.MascotManager
             mascots.Add(mascot);
 
             RenderBatch.AddBatch(mascot);
+
+            mascot.animator = new();
         }
 
         public void AddMascot(Mascot mascot)
@@ -120,9 +120,24 @@ namespace StepanMascot.MascotManager
             m.objectBatch.RemoveMascot(m);
         }
 
-        public void RenderExistentMascot(string mascotIdentifier)
+        public void RenderExistentMascot(int mascotIdentifier)
         {
+            Mascot? mascot = mascots[mascotIdentifier];
 
+            if (mascot == null)
+                return;
+
+            RenderBatch.AddBatch(mascot);
+        }
+
+        public void UnRenderMascot(int id)
+        {
+            Mascot? mascot = mascots[id];
+
+            if (mascot == null)
+                return;
+
+            mascot.objectBatch.RemoveMascot(mascot);
         }
 
         public void UpdateMascot(float dt)

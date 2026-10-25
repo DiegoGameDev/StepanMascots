@@ -39,7 +39,8 @@ namespace StepanMascot.StepanInterComunications
             response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
             response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
 
-            Console.WriteLine(request?.Url?.AbsolutePath);
+            string responseString = "";
+
 
             if (request.HttpMethod == "OPTIONS")
             {
@@ -61,8 +62,8 @@ namespace StepanMascot.StepanInterComunications
 
                         JObject obj = JObject.Parse(jsonContent);
 
+                        responseString = $"{mascotGraphicManager.mascotsController.mascots.Count}";
                         ActionsQueue.shareActions.Enqueue(() => mascotGraphicManager.mascotsController.CreateMascot(obj));
-                        
                     }
                 }
                 if (request.Url.AbsolutePath == "/mascotcontroller/add")
@@ -71,17 +72,52 @@ namespace StepanMascot.StepanInterComunications
                 }
                 if (request.Url.AbsolutePath == "/mascotcontroller/remove")
                 {
-                    
+                    //ler o conteudo
+                    string jsonContent;
+                    using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    {
+                        jsonContent = reader.ReadToEnd();
+
+                        JObject obj = JObject.Parse(jsonContent);
+
+                    }
                 }
                 if (request.Url.AbsolutePath == "/mascotcontroller/render")
                 {
-                   
+                    //||
+                    string jsonContent;
+                    using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    {
+                        jsonContent = reader.ReadToEnd();
+
+                       
+                        JObject obj = JObject.Parse(jsonContent);
+                        int id = obj["mascotName"].Value<int>();
+
+                        responseString = "TRY RENDER";
+                        ActionsQueue.shareActions.Enqueue(() => mascotGraphicManager.mascotsController.RenderExistentMascot(id));
+                    }
+                }
+                if (request.Url.AbsolutePath == "/mascotcontroller/unrender")
+                {
+                    //||
+                    string jsonContent;
+                    using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    {
+                        jsonContent = reader.ReadToEnd();
+
+                       
+                        JObject obj = JObject.Parse(jsonContent);
+                        int id = obj["mascotName"].Value<int>();
+
+                        responseString = "TRY RENDER";
+                        ActionsQueue.shareActions.Enqueue(() => mascotGraphicManager.mascotsController.UnRenderMascot(id));
+                    }
                 }
                 #endregion
             }
 
 
-            string responseString = "Cara, tamo estudando tamo estudando";
             byte[] buffer = Encoding.UTF8.GetBytes( responseString );
 
             response.ContentType = "text/plain; charset=utf-8";

@@ -1,0 +1,25 @@
+States:
+init,
+any_state,
+sleeping.has(sleep),
+breathing.has(breathe),
+attackMonitor.has(attack),
+exit *
+
+Parameters:
+*
+
+Transitions:
+init.addTransition(breathing);
+
+any_state.addTransition(sleep).animParameter(inactive, float, 99, greater);
+any_state.addTransition(attackMonitor);
+
+attackMonitor.addTransition(sleep).endOfAnimation();
+
+exit.has()*
+
+Clips:
+breathe,
+attack,
+sleep *
